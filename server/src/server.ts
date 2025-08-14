@@ -13,6 +13,8 @@ import * as data5 from "./viz_completions5.json";
 import * as vizevent from "./vizevent_completions.json";
 import { DefinitionLink } from "vscode-languageserver";
 import { open } from "fs";
+const fs = require('fs');
+const path = require("path");
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -1259,11 +1261,72 @@ function PositionInRange(range: ls.Range, position: ls.Position): boolean {
 
 let symbolCache: { [id: string]: VizSymbol[] } = {};
 
-function RefreshDocumentsSymbols(uri: string) {
+async function RefreshDocumentsSymbols(uri: string) {
   let startTime: number = Date.now();
-  let symbolsList: VizSymbol[] = CollectSymbols(documents.get(uri));
+  const parentDir = path.dirname(uri);
+
+  const doc = documents.get(uri);
+  if (!doc) {
+    let symbolsList: VizSymbol[] = CollectSymbols(documents.get(uri));
+    symbolCache[uri] = symbolsList;
+    return;
+  }
+  // Step 1: Transform the document text
+  const transformedText = transformDocumentText(doc, parentDir);
+
+  // Step 2: Create a "virtual" TextDocument with the modified contents
+  // We can clone the original document and override getText
+  const virtualDoc: TextDocument = {
+    ...doc,
+    getText: () => transformedText,
+  };
+
+  let symbolsList: VizSymbol[] = CollectSymbols(virtualDoc);
   symbolCache[uri] = symbolsList;
   //connection.console.info("Found " + symbolsList.length + " document symbols in '" + uri + "': " + (Date.now() - startTime) + " ms");
+}
+
+// Utility function to transform includes
+function transformDocumentText(doc: TextDocument, parentDir: string): string {
+  const lines = doc.getText().split(/\r?\n/);
+  const transformed: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (line.startsWith("'#include ")) {
+      let str = line.slice(10).trim();
+      if (str !== "") {
+        if (!str.endsWith(".viz5")) {
+          str += ".viz5";
+        }
+        const includePath = str;
+        const resolvedPath = path.resolve(parentDir, includePath);
+
+        // Blocking read of included file
+        const fileData = readFileContentsBlocking(includePath);
+        transformed.push(fileData);
+      }
+    } else {
+      transformed.push(line);
+    }
+  }
+
+  return transformed.join("\n");
+}
+
+function readFileContentsBlocking(filePath : string) {
+  if(filePath.startsWith("file:\\")){
+    filePath = filePath.slice(7)[1];
+  }
+  const absolutePath = path.resolve(filePath); // Ensure absolute path
+  try {
+      const data = fs.readFileSync(absolutePath, 'utf8'); // Blocks until complete
+      return data;
+  } catch (err) {
+      console.error(`Error reading file: ${err.message}`);
+      return null;
+  }
 }
 
 connection.onDocumentSymbol((docParams: ls.DocumentSymbolParams): ls.SymbolInformation[] => {
