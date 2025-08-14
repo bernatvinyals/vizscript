@@ -1,20 +1,22 @@
 {
-	"name": "vizscript",
-	"displayName": "Viz Script",
-	"description": "A complete language extension for Viz Script. Auto complete, syntax checking, syntax highlighting, signature help, jump to definition and more.",
+	"name": "vizscript-aks",
+	"displayName": "Viz Script (AKS fork)",
+	"description": "A complete language extension for Viz Script. Auto complete, syntax checking, syntax highlighting, signature help, jump to definition and more. Additionally you can use '#include {path} to append functions from other files",
 	"author": "Fredrik Hareide",
 	"license": "MIT",
 	"version": "0.4.1",
-	"publisher": "fhareide",
+	"publisher": "bernatvinyals",
 	"keywords": [
 		"Vizrt",
 		"Viz Artist",
 		"Viz Engine",
-		"Viz Scripting"
+		"Viz Scripting",
+		"AKS",
+		"Alkamel systems"
 	],
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/fhareide/vizscript"
+		"url": "https://github.com/bernatvinyals/vizscript"
 	},
 	"categories": [
 		"Language Packs",

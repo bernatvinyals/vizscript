@@ -15,7 +15,7 @@ import { DefinitionLink } from "vscode-languageserver";
 import { open } from "fs";
 const fs = require('fs');
 const path = require("path");
-
+import { fileURLToPath } from 'url';
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
 let connection = ls.createConnection(ls.ProposedFeatures.all);
@@ -1263,7 +1263,9 @@ let symbolCache: { [id: string]: VizSymbol[] } = {};
 
 async function RefreshDocumentsSymbols(uri: string) {
   let startTime: number = Date.now();
-  const parentDir = path.dirname(uri);
+  const filePath = fileURLToPath(uri); // convert file:// URI to OS path
+  const parentDir = path.dirname(path.dirname(filePath)) + "/"; // Go two levels up
+
 
   const doc = documents.get(uri);
   if (!doc) {
@@ -1290,7 +1292,6 @@ async function RefreshDocumentsSymbols(uri: string) {
 function transformDocumentText(doc: TextDocument, parentDir: string): string {
   const lines = doc.getText().split(/\r?\n/);
   const transformed: string[] = [];
-
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
@@ -1301,10 +1302,10 @@ function transformDocumentText(doc: TextDocument, parentDir: string): string {
           str += ".viz5";
         }
         const includePath = str;
-        const resolvedPath = path.resolve(parentDir, includePath);
+        const resolvedPath =  parentDir+ includePath;
 
         // Blocking read of included file
-        const fileData = readFileContentsBlocking(includePath);
+        const fileData = readFileContentsBlocking(resolvedPath);
         transformed.push(fileData);
       }
     } else {
@@ -1316,13 +1317,9 @@ function transformDocumentText(doc: TextDocument, parentDir: string): string {
 }
 
 function readFileContentsBlocking(filePath : string) {
-  if(filePath.startsWith("file:\\")){
-    filePath = filePath.slice(7)[1];
-  }
-  const absolutePath = path.resolve(filePath); // Ensure absolute path
   try {
-      const data = fs.readFileSync(absolutePath, 'utf8'); // Blocks until complete
-      return data;
+      const fileData = fs.readFileSync(filePath, 'utf8'); // Blocks until complete
+      return fileData;
   } catch (err) {
       console.error(`Error reading file: ${err.message}`);
       return null;
