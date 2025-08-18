@@ -1282,8 +1282,17 @@ async function RefreshDocumentsSymbols(uri: string) {
     ...doc,
     getText: () => transformedText,
   };
-
-  let symbolsList: VizSymbol[] = CollectSymbols(virtualDoc);
+  let realDocSymbolsList: VizSymbol[] = CollectSymbols(documents.get(uri));
+  let virtualDocSymbolsList: VizSymbol[] = CollectSymbols(virtualDoc);
+  let symbolsList: VizSymbol[] = realDocSymbolsList;
+  for (let i = 0; i < virtualDocSymbolsList.length; i++) {
+    const symbol : VizSymbol = virtualDocSymbolsList[i];
+    const existentSymbol : VizSymbol | null = realDocSymbolsList.find((value) => {return value.name == symbol.name;});
+    if(!existentSymbol){
+      //symbol in new doc doesn't exists so we add it to final symbol cache
+      symbolsList.push(symbol);
+    }
+  }
   symbolCache[uri] = symbolsList;
   //connection.console.info("Found " + symbolsList.length + " document symbols in '" + uri + "': " + (Date.now() - startTime) + " ms");
 }
